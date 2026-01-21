@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: easyshop-service
+  namespace: easy-shop
+spec:
+  selector:
+    app: easyshop
+  ports:
+  - port: 80
+    targetPort: 3000
+    nodePort: 30000
+  type: NodePort 

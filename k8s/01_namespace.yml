@@ -1,0 +1,7 @@
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: easy-shop
+  labels:
+    name: easyshop
+    environment: production

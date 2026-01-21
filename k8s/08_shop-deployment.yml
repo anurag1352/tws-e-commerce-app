@@ -1,0 +1,50 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: shop-deployment
+  namespace: easy-shop
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: easyshop
+  template:
+    metadata:
+      labels:
+        app: easyshop
+    spec:
+      containers:
+      - name: easyshop-ctr
+        image: anurag904/easyshop-app:latest
+        ports:
+          - containerPort: 3000
+        envFrom:
+        - configMapRef:
+            name: easyshop-config
+        - secretRef:
+            name: easyshop-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        startupProbe:
+          httpGet:
+            path: /
+            port: 3000
+          failureThreshold: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          failureThreshold: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          failureThreshold: 30
+          periodSeconds: 10
