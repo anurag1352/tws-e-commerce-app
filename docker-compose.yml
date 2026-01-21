@@ -18,8 +18,7 @@ services:
       start_period: 60s
 
   migration:
-    build:
-      context: .
+    image: anurag904/easyshop-migration:latest
       dockerfile: scripts/Dockerfile.migration
     container_name: easyshop-migration
     env_file:
@@ -31,8 +30,7 @@ services:
       - easyshop
 
   main-shop:
-    build:
-      context: .
+    image: anurag904/easyshop-app:latest
     container_name: easyshop-ctr
     ports:
       - "3000:3000"
