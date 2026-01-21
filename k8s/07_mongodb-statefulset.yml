@@ -1,5 +1,5 @@
-kind: StatefulSet
 apiVersion: apps/v1
+kind: StatefulSet
 metadata:
   name: mongodb-statefulset
   namespace: easy-shop
@@ -15,13 +15,10 @@ spec:
         app: mongodb
     spec:
       containers:
-      - name: mongodb-ctr
+      - name: mongodb
         image: mongo:latest
         ports:
         - containerPort: 27017
-        volumeMounts:
-          - name: mongodb-storage
-            mountPath: /data/db
         resources:
           requests:
             memory: "256Mi"
@@ -29,8 +26,11 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
-      volumes:
-        - name: mongodb-storage
-          persistentVolumeClaim:
-            claimName: mongodb-pvc
-
+  volumeClaimTemplates:
+  - metadata:
+      name: mongodb-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 500Mi
