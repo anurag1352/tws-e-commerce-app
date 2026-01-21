@@ -1,5 +1,5 @@
-kind: Job
 apiVersion: batch/v1
+kind: Job
 metadata:
   name: db-migration
   namespace: easy-shop
@@ -14,3 +14,4 @@ spec:
         - name: MONGODB_URI
           value: "mongodb://mongodb-service:27017/easy-shop"
       restartPolicy: OnFailure
+
