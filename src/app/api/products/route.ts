@@ -1,4 +1,4 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Product from '@/lib/models/product';
 import { requireAuth } from '@/lib/auth/utils';
@@ -21,13 +21,14 @@ export async function GET(request: NextRequest) {
     
     // Filter by shop category
     if (searchParams.has('shop_category')) {
-      query.shop_category = searchParams.get('shop_category');
+      const shopCat = searchParams.get('shop_category');
+      if (shopCat && shopCat !== 'Select Shop') query.shop_category = shopCat;
     }
     
     // Filter by categories
     if (searchParams.has('categories')) {
       const categories = searchParams.get('categories')?.split(',') || [];
-      query.categories = { $in: categories };
+      if (categories.length) query.categories = { $in: categories };
     }
 
     // Filter by price range
@@ -46,18 +47,25 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
-    // Sorting
-    let sort: any = { createdAt: -1 };
+    // Sorting safely
+    let productsQuery = Product.find(query).skip(skip).limit(limit);
+
     if (searchParams.has('sort')) {
-      const [field, order] = (searchParams.get('sort') as string).split(':');
-      sort = { [field]: order === 'desc' ? -1 : 1 };
+      const sortParam = searchParams.get('sort') as string;
+      if (sortParam.includes(':')) {
+        const [field, order] = sortParam.split(':');
+        if (field && ['asc', 'desc'].includes(order)) {
+          const sortObj: any = {};
+          sortObj[field] = order === 'asc' ? 1 : -1;
+          productsQuery = productsQuery.sort(sortObj);
+        }
+      }
+    } else {
+      // Default sorting
+      productsQuery = productsQuery.sort({ createdAt: -1 });
     }
 
-    const products = await Product.find(query)
-      .sort(sort)
-      .skip(skip)
-      .limit(limit);
-
+    const products = await productsQuery;
     const total = await Product.countDocuments(query);
 
     return NextResponse.json({
@@ -81,24 +89,25 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth(request);
+
     if (auth.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     await dbConnect();
-
     const body = await request.json();
+
+    // Validate minimum fields
+    if (!body.title || !body.price || !body.shop_category) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
     const product = await Product.create(body);
 
     return NextResponse.json(product, { status: 201 });
   } catch (error: any) {
     console.error('Error creating product:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
-      { status: error.message === 'Authentication required' ? 401 : 500 }
-    );
+    const status = error.message === 'Authentication required' ? 401 : 500;
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status });
   }
 }
