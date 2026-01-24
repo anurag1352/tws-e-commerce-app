@@ -1,3 +1,6 @@
+"use client"; // ✅ Important: makes this a client component
+
+import { useEffect, useState } from "react";
 import BannerSlider from "@/components/BannerSlider";
 import BekaryCategories from "@/components/BekaryCategories";
 import BooksCategory from "@/components/BooksCategory";
@@ -5,58 +8,41 @@ import FeaturedProducts from "@/components/FeaturedProducts";
 import ShopCategories from "@/components/ShopCategories";
 import HeroSlider from "@/components/heros/HeroSlider";
 
+// Hero slider images
 const heroImages = [
-  {
-    bgImg: "/heroImages/clothing1.png",
-  },
-  {
-    bgImg: "/heroImages/gadget1.png",
-  },
-  {
-    bgImg: "/heroImages/makeup2.png",
-  },
-  {
-    bgImg: "/heroImages/furniture1.png",
-  },
-  {
-    bgImg: "/heroImages/clothing2.png",
-  },
-  {
-    bgImg: "/heroImages/book1.png",
-  },
-  {
-    bgImg: "/heroImages/clothing3.png",
-  },
-  {
-    bgImg: "/heroImages/grocery.png",
-  },
+  { bgImg: "/heroImages/clothing1.png" },
+  { bgImg: "/heroImages/gadget1.png" },
+  { bgImg: "/heroImages/makeup2.png" },
+  { bgImg: "/heroImages/furniture1.png" },
+  { bgImg: "/heroImages/clothing2.png" },
+  { bgImg: "/heroImages/book1.png" },
+  { bgImg: "/heroImages/clothing3.png" },
+  { bgImg: "/heroImages/grocery.png" },
 ];
 
+// Banner images
 const banners = [
-  {
-    img: "/bannerImages/banner1.png",
-  },
-  {
-    img: "/bannerImages/banner2.png",
-  },
-  {
-    img: "/bannerImages/banner3.png",
-  },
-  {
-    img: "/bannerImages/banner4.png",
-  },
-  {
-    img: "/bannerImages/banner5.png",
-  },
+  { img: "/bannerImages/banner1.png" },
+  { img: "/bannerImages/banner2.png" },
+  { img: "/bannerImages/banner3.png" },
+  { img: "/bannerImages/banner4.png" },
+  { img: "/bannerImages/banner5.png" },
 ];
 
 export default function Home({
   searchParams,
 }: {
-  searchParams: {
-    featured: string;
-  };
+  searchParams: { featured: string };
 }) {
+  // ✅ Ensure code using document/window only runs in browser
+  const [isBrowser, setIsBrowser] = useState(false);
+
+  useEffect(() => {
+    setIsBrowser(true);
+  }, []);
+
+  if (!isBrowser) return null; // Prevent SSR crash
+
   return (
     <main>
       <HeroSlider heroImages={heroImages} />
