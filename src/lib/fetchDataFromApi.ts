@@ -1,11 +1,18 @@
 import axios from "axios";
 
-// ✅ Server & Client safe baseURL
-const baseURL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+/**
+ * NOTE:
+ * - document / window sirf browser me available hote hain
+ * - isliye token read karna client-side me hi hoga
+ */
 
-// ✅ Axios instance (NO window / document here)
-const axiosInstance = axios.create({
+const isBrowser = typeof window !== "undefined";
+
+const baseURL = isBrowser
+  ? "/api"
+  : process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+
+export const axiosInstance = axios.create({
   baseURL,
   headers: {
     "Content-Type": "application/json",
@@ -13,15 +20,14 @@ const axiosInstance = axios.create({
   withCredentials: true,
 });
 
-// ✅ Request interceptor (CLIENT-ONLY cookie access)
-axiosInstance.interceptors.request.use(
-  (config) => {
-    if (typeof window !== "undefined") {
+// Interceptor (ONLY in browser)
+if (isBrowser) {
+  axiosInstance.interceptors.request.use(
+    (config) => {
       const cookies = document.cookie.split(";");
       const tokenCookie = cookies.find((c) =>
         c.trim().startsWith("token=")
       );
-
       const token = tokenCookie
         ? decodeURIComponent(tokenCookie.split("=")[1])
         : null;
@@ -29,14 +35,13 @@ axiosInstance.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
-    }
 
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+}
 
-// ✅ API helpers (clean & safe)
 const fetchDataFromApi = {
   get: async (url: string, params = {}) => {
     return axiosInstance.get(url, { params });
@@ -48,6 +53,3 @@ const fetchDataFromApi = {
 };
 
 export default fetchDataFromApi;
-
-
-export default fetchData;
