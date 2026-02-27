@@ -1,6 +1,6 @@
-version: '3.8'
-
+version: "3.8"
 services:
+
   mongodb:
     image: mongo:latest
     container_name: easyshop-mongodb
@@ -23,7 +23,7 @@ services:
       dockerfile: scripts/Dockerfile.migration
     container_name: easyshop-migration
     env_file:
-      - .env.local
+      - .env
     depends_on:
       mongodb:
         condition: service_healthy
@@ -38,7 +38,7 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - .env.local
+      - .env
     depends_on:
       migration:
         condition: service_completed_successfully
