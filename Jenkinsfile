@@ -1,123 +1,71 @@
-@Library('Shared') _
-
-pipeline {
+pipeline{
     agent any
     
-    environment {
-        // Update the main app image name to match the deployment file
-        DOCKER_IMAGE_NAME = 'trainwithshubham/easyshop-app'
-        DOCKER_MIGRATION_IMAGE_NAME = 'trainwithshubham/easyshop-migration'
-        DOCKER_IMAGE_TAG = "${BUILD_NUMBER}"
-        GITHUB_CREDENTIALS = credentials('github-credentials')
-        GIT_BRANCH = "master"
+     environment {
+        SCANNER_HOME = tool 'sonar-scanner'
     }
     
-    stages {
-        stage('Cleanup Workspace') {
+    stages{
+        stage('Clean Workspace'){
+            steps{
+                cleanWs()
+            }
+        }
+        stage('Clone Repo'){
+            steps{
+                git url: 'https://github.com/anurag1352/tws-e-commerce-app.git', branch: 'master'
+            }
+        }
+        stage('SonarQube Analysis') {
             steps {
-                script {
-                    clean_ws()
+                withSonarQubeEnv('Sonar') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=e-commerce-Project \
+                            -Dsonar.projectKey=e-commerce-Project '''
                 }
             }
         }
-        
-        stage('Clone Repository') {
+         stage('Quality Gate Check') {
             steps {
-                script {
-                    clone("https://github.com/LondheShubham153/tws-e-commerce-app.git","master")
+                timeout(time: 1, unit: 'HOURS') {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
                 }
             }
         }
-        
-        stage('Build Docker Images') {
-            parallel {
-                stage('Build Main App Image') {
-                    steps {
-                        script {
-                            docker_build(
-                                imageName: env.DOCKER_IMAGE_NAME,
-                                imageTag: env.DOCKER_IMAGE_TAG,
-                                dockerfile: 'Dockerfile',
-                                context: '.'
-                            )
-                        }
-                    }
-                }
-                
-                stage('Build Migration Image') {
-                    steps {
-                        script {
-                            docker_build(
-                                imageName: env.DOCKER_MIGRATION_IMAGE_NAME,
-                                imageTag: env.DOCKER_IMAGE_TAG,
-                                dockerfile: 'scripts/Dockerfile.migration',
-                                context: '.'
-                            )
-                        }
-                    }
-                }
+        stage('Build Docker Image'){
+            steps{
+                sh 'docker build -t e-commerce .'
             }
         }
-        
-        stage('Run Unit Tests') {
+        stage('Build Migrate Image') {
             steps {
-                script {
-                    run_tests()
-                }
+                sh 'docker build -t tws-migration -f scripts/Dockerfile.migration .'
             }
         }
-        
-        stage('Security Scan with Trivy') {
-            steps {
-                script {
-                    // Create directory for results
-                  
+         stage("Trivy: Filesystem scan"){
+            steps{
+                script{
                     trivy_scan()
-                    
                 }
             }
         }
-        
-        stage('Push Docker Images') {
-            parallel {
-                stage('Push Main App Image') {
-                    steps {
-                        script {
-                            docker_push(
-                                imageName: env.DOCKER_IMAGE_NAME,
-                                imageTag: env.DOCKER_IMAGE_TAG,
-                                credentials: 'docker-hub-credentials'
-                            )
-                        }
-                    }
-                }
-                
-                stage('Push Migration Image') {
-                    steps {
-                        script {
-                            docker_push(
-                                imageName: env.DOCKER_MIGRATION_IMAGE_NAME,
-                                imageTag: env.DOCKER_IMAGE_TAG,
-                                credentials: 'docker-hub-credentials'
-                            )
-                        }
-                    }
+        stage('run test'){
+            steps{
+                echo "Testing Start.."
+                echo "Testing Done..."
+            }
+        }
+        stage('Push To DockerHub'){
+            steps{
+                withCredentials([usernamePassword(credentialsId: "docker_creds", passwordVariable: "dockerHubPass", usernameVariable: "dockerHubUser")]){
+                    sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPass}"
+                    sh "docker image tag e-commerce:latest ${env.dockerHubUser}/e-commerce:latest"
+                    sh "docker push ${env.dockerHubUser}/e-commerce:latest"
                 }
             }
         }
-        
-        // Add this new stage
-        stage('Update Kubernetes Manifests') {
-            steps {
-                script {
-                    update_k8s_manifests(
-                        imageTag: env.DOCKER_IMAGE_TAG,
-                        manifestsPath: 'kubernetes',
-                        gitCredentials: 'github-credentials',
-                        gitUserName: 'Jenkins CI',
-                        gitUserEmail: 'shubhamnath5@gmail.com'
-                    )
-                }
+        stage('Deploy To Server'){
+            steps{
+                sh 'docker-compose down && docker-compose up -d'
             }
         }
     }
