@@ -1,17 +1,17 @@
-pipeline{
+pipeline {
     agent any
     
-     environment {
+      environment {
         SCANNER_HOME = tool 'sonar-scanner'
     }
-    
-    stages{
-        stage('Clean Workspace'){
-            steps{
+
+    stages {
+        stage('Clean WorkSpace') {
+            steps {
                 cleanWs()
             }
         }
-        stage('Clone Repo'){
+        stage('Git Clone'){
             steps{
                 git url: 'https://github.com/anurag1352/tws-e-commerce-app.git', branch: 'master'
             }
@@ -19,8 +19,8 @@ pipeline{
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('Sonar') {
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=e-commerce-Project \
-                            -Dsonar.projectKey=e-commerce-Project '''
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=easyshop-Project \
+                            -Dsonar.projectKey=easyshop-Project '''
                 }
             }
         }
@@ -31,39 +31,34 @@ pipeline{
                 }
             }
         }
-        stage('Build Docker Image'){
+        stage('Build'){
             steps{
-                sh 'docker build -t e-commerce .'
+                sh 'docker build -t easyshop .'
             }
         }
-        stage('Build Migrate Image') {
-            steps {
-                sh 'docker build -t tws-migration -f scripts/Dockerfile.migration .'
+        stage('Test'){
+            steps{
+                echo "Testing Start"
+                echo "Testing Complete"
             }
         }
-         stage("Trivy: Filesystem scan"){
+        stage("Trivy: Filesystem scan"){
             steps{
                 script{
-                    trivy_scan()
+                    sh 'trivy fs --format table -o fs-report.html .'
                 }
-            }
-        }
-        stage('run test'){
-            steps{
-                echo "Testing Start.."
-                echo "Testing Done..."
             }
         }
         stage('Push To DockerHub'){
             steps{
                 withCredentials([usernamePassword(credentialsId: "docker_creds", passwordVariable: "dockerHubPass", usernameVariable: "dockerHubUser")]){
                     sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPass}"
-                    sh "docker image tag e-commerce:latest ${env.dockerHubUser}/e-commerce:latest"
-                    sh "docker push ${env.dockerHubUser}/e-commerce:latest"
+                    sh "docker image tag easyshop:latest ${env.dockerHubUser}/easyshop:latest"
+                    sh "docker push ${env.dockerHubUser}/easyshop:latest"
                 }
             }
         }
-        stage('Deploy To Server'){
+        stage('Deploy'){
             steps{
                 sh 'docker-compose down && docker-compose up -d'
             }
